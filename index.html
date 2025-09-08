@@ -100,45 +100,29 @@
             color: #6c757d;
             text-align: center;
         }
-        .local-file-warning {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            color: #721c24;
-        }
-        .server-options {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            color: #0c5460;
-        }
-        .code-block {
+        .debug-panel {
             background-color: #f8f9fa;
-            border-radius: 0.25rem;
-            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
             font-family: monospace;
-            margin-top: 0.5rem;
-            overflow-x: auto;
+            font-size: 0.8rem;
+            max-height: 200px;
+            overflow-y: auto;
         }
-        .editable-url {
-            background-color: #fff;
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            padding: 0.5rem;
-            font-family: monospace;
-            width: 100%;
-            margin-top: 0.5rem;
+        .debug-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
     <div class="hero">
         <div class="container text-center">
-            <h1 class="display-4 fw-bold mb-4">KevTrackr</h1>
+            <h1 class="display-4 fw-bold mb-4">Location Tracker</h1>
             <p class="lead">Create tracking links to get location information when they're opened</p>
         </div>
     </div>
@@ -146,35 +130,6 @@
     <div class="container mb-5">
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <div id="localFileWarning" class="local-file-warning" style="display: none;">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>Local File Detected:</strong> You're opening this file directly from your system. For full functionality, please use a web server.
-                </div>
-                
-                <div id="serverOptions" class="server-options" style="display: none;">
-                    <h5><i class="bi bi-server me-2"></i>Quick Server Options:</h5>
-                    <div class="row mt-3">
-                        <div class="col-md-6 mb-2">
-                            <h6>VS Code Users:</h6>
-                            <p>Install "Live Server" extension, then right-click and select "Open with Live Server"</p>
-                        </div>
-                        <div class="col-md-6 mb-2">
-                            <h6>Python Users:</h6>
-                            <p>Run this command in your terminal:</p>
-                            <div class="code-block">python -m http.server</div>
-                        </div>
-                        <div class="col-md-6 mb-2">
-                            <h6>Node.js Users:</h6>
-                            <p>Install and run:</p>
-                            <div class="code-block">npx http-server</div>
-                        </div>
-                        <div class="col-md-6 mb-2">
-                            <h6>Online Hosting:</h6>
-                            <p>Upload to GitHub Pages, Netlify, or Vercel</p>
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="card mb-4">
                     <div class="card-body p-4">
                         <h2 class="card-title mb-4">Create New Tracking Link</h2>
@@ -196,18 +151,13 @@
                 <div id="resultSection" class="card mb-4" style="display: none;">
                     <div class="card-body p-4">
                         <h2 class="card-title mb-3">Your Tracking Link</h2>
-                        <div id="urlDisplay" class="tracking-link mb-3">
+                        <div class="tracking-link mb-3">
                             <span id="trackingLink"></span>
                             <button class="copy-btn" id="copyBtn" title="Copy to clipboard">
                                 <i class="bi bi-clipboard"></i>
                             </button>
                         </div>
-                        <div id="urlEditSection" style="display: none;">
-                            <label class="form-label">Edit the base URL:</label>
-                            <input type="text" class="editable-url" id="editableUrl" placeholder="https://your-domain.com/path/to/file.html">
-                            <small class="form-text">Replace with your actual domain and path</small>
-                        </div>
-                        <div class="d-flex gap-2 mt-3">
+                        <div class="d-flex gap-2">
                             <button id="viewLocationsBtn" class="btn btn-outline-primary">
                                 <i class="bi bi-geo-alt me-2"></i>View Locations
                             </button>
@@ -228,6 +178,12 @@
                             <i class="bi bi-info-circle me-2"></i>No location data yet. Share your tracking link to start collecting locations.
                         </div>
                     </div>
+                </div>
+
+                <!-- Debug Panel (Hidden by default) -->
+                <div id="debugPanel" class="debug-panel" style="display: none;">
+                    <h6>Debug Information:</h6>
+                    <div id="debugContent"></div>
                 </div>
             </div>
         </div>
@@ -269,23 +225,57 @@
         </div>
     </div>
 
+    <!-- Debug Toggle Button -->
+    <button id="debugToggle" class="btn btn-sm btn-secondary debug-toggle">
+        <i class="bi bi-bug"></i> Debug
+    </button>
+
     <script>
-        // Check if we're opening from local file system
-        function isLocalFile() {
-            return window.location.protocol === 'file:';
+        // Debug function
+        function debug(message) {
+            const debugContent = document.getElementById('debugContent');
+            const timestamp = new Date().toLocaleTimeString();
+            debugContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            console.log(message);
         }
 
-        // Show warnings and instructions if opening from local file
-        if (isLocalFile()) {
-            document.getElementById('localFileWarning').style.display = 'block';
-            document.getElementById('serverOptions').style.display = 'block';
+        // Toggle debug panel
+        document.getElementById('debugToggle').addEventListener('click', function() {
+            const panel = document.getElementById('debugPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Initialize data from localStorage or create new
+        let trackingData;
+        try {
+            const savedData = localStorage.getItem('locationTrackerData');
+            if (savedData) {
+                trackingData = JSON.parse(savedData);
+                debug('Loaded data from localStorage');
+            } else {
+                trackingData = {
+                    links: [],
+                    locations: {}
+                };
+                debug('Created new tracking data');
+            }
+        } catch (e) {
+            debug(`Error loading data: ${e.message}`);
+            trackingData = {
+                links: [],
+                locations: {}
+            };
         }
 
-        // Simulated database - in a real app, this would be on a server
-        const trackingData = {
-            links: [],
-            locations: {}
-        };
+        // Save data to localStorage
+        function saveData() {
+            try {
+                localStorage.setItem('locationTrackerData', JSON.stringify(trackingData));
+                debug('Data saved to localStorage');
+            } catch (e) {
+                debug(`Error saving data: ${e.message}`);
+            }
+        }
 
         // DOM elements
         const generateBtn = document.getElementById('generateBtn');
@@ -297,16 +287,16 @@
         const locationsSection = document.getElementById('locationsSection');
         const locationsList = document.getElementById('locationsList');
         const noLocations = document.getElementById('noLocations');
-        const urlEditSection = document.getElementById('urlEditSection');
-        const editableUrl = document.getElementById('editableUrl');
 
         // Generate tracking link
         generateBtn.addEventListener('click', function() {
+            debug('Generate button clicked');
             const linkName = document.getElementById('linkName').value || 'Unnamed Link';
             const redirectUrl = document.getElementById('redirectUrl').value;
             
             // Generate unique ID
             const linkId = generateUniqueId();
+            debug(`Generated link ID: ${linkId}`);
             
             // Store link data
             trackingData.links.push({
@@ -319,49 +309,19 @@
             // Initialize locations storage for this link
             trackingData.locations[linkId] = [];
             
-            // Build base URL
-            let baseUrl;
-            let isEditable = false;
-            
-            if (isLocalFile()) {
-                // For local files, provide a placeholder URL
-                baseUrl = 'https://your-website.com/location-tracker.html';
-                isEditable = true;
-            } else if (window.location.origin) {
-                baseUrl = window.location.origin + window.location.pathname;
-            } else {
-                // Fallback for environments where origin is null
-                const tempUrl = new URL(window.location.href, 'http://example.com');
-                baseUrl = tempUrl.origin + tempUrl.pathname;
-                
-                // If still not working, use a placeholder
-                if (baseUrl === 'http://example.com/') {
-                    baseUrl = 'https://your-website.com/location-tracker.html';
-                    isEditable = true;
-                }
-            }
+            // Save data
+            saveData();
             
             // Show result
+            const baseUrl = window.location.origin + window.location.pathname;
             trackingLink.textContent = `${baseUrl}?track=${linkId}`;
             resultSection.style.display = 'block';
             locationsSection.style.display = 'none';
             
-            // Show editable URL section if needed
-            if (isEditable) {
-                urlEditSection.style.display = 'block';
-                editableUrl.value = baseUrl;
-            } else {
-                urlEditSection.style.display = 'none';
-            }
+            debug(`Tracking link created: ${trackingLink.textContent}`);
             
             // Scroll to result
             resultSection.scrollIntoView({ behavior: 'smooth' });
-        });
-
-        // Update tracking link when editable URL changes
-        editableUrl.addEventListener('input', function() {
-            const trackId = new URL(trackingLink.textContent).searchParams.get('track');
-            trackingLink.textContent = `${editableUrl.value}?track=${trackId}`;
         });
 
         // Copy to clipboard
@@ -375,12 +335,16 @@
                     icon.classList.remove('bi-check-lg');
                     icon.classList.add('bi-clipboard');
                 }, 2000);
+                
+                debug('Link copied to clipboard');
             });
         });
 
         // View locations
         viewLocationsBtn.addEventListener('click', function() {
+            debug('View locations button clicked');
             const linkId = new URL(trackingLink.textContent).searchParams.get('track');
+            debug(`Viewing locations for link ID: ${linkId}`);
             displayLocations(linkId);
             locationsSection.style.display = 'block';
             locationsSection.scrollIntoView({ behavior: 'smooth' });
@@ -388,6 +352,7 @@
 
         // Create new link
         newLinkBtn.addEventListener('click', function() {
+            debug('New link button clicked');
             document.getElementById('linkName').value = '';
             document.getElementById('redirectUrl').value = '';
             resultSection.style.display = 'none';
@@ -401,7 +366,9 @@
 
         // Display locations
         function displayLocations(linkId) {
+            debug(`Displaying locations for link ID: ${linkId}`);
             const locations = trackingData.locations[linkId] || [];
+            debug(`Found ${locations.length} locations`);
             
             if (locations.length === 0) {
                 locationsList.innerHTML = '';
@@ -447,11 +414,17 @@
         const urlParams = new URLSearchParams(window.location.search);
         const trackId = urlParams.get('track');
         
+        debug(`URL Parameters: ${window.location.search}`);
+        debug(`Track ID from URL: ${trackId}`);
+        
         if (trackId) {
+            debug('This is a tracking link - processing location request');
             // This is a tracking link - get location
             if (navigator.geolocation) {
+                debug('Geolocation is supported');
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
+                        debug('Location permission granted');
                         const locationData = {
                             latitude: position.coords.latitude,
                             longitude: position.coords.longitude,
@@ -459,21 +432,28 @@
                             userAgent: navigator.userAgent
                         };
                         
-                        // Store location (in a real app, this would be sent to a server)
-                        if (trackingData.locations[trackId]) {
-                            trackingData.locations[trackId].push(locationData);
+                        debug(`Location captured: ${locationData.latitude}, ${locationData.longitude}`);
+                        
+                        // Initialize locations array if it doesn't exist
+                        if (!trackingData.locations[trackId]) {
+                            trackingData.locations[trackId] = [];
+                            debug(`Created new locations array for track ID: ${trackId}`);
                         }
+                        
+                        // Store location
+                        trackingData.locations[trackId].push(locationData);
+                        
+                        // Save data
+                        saveData();
+                        
+                        debug('Location data saved');
                         
                         // Get redirect URL
                         const link = trackingData.links.find(l => l.id === trackId);
                         const redirectUrl = link?.redirectUrl || 'https://example.com';
+                        debug(`Redirecting to: ${redirectUrl}`);
                         
-                        // Redirect after a short delay
-                        setTimeout(() => {
-                            window.location.href = redirectUrl;
-                        }, 2000);
-                        
-                        // Show confirmation
+                        // Show confirmation before redirect
                         document.body.innerHTML = `
                             <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
                                 <div class="card text-center" style="width: 100%; max-width: 500px;">
@@ -488,8 +468,14 @@
                                 </div>
                             </div>
                         `;
+                        
+                        // Redirect after a short delay
+                        setTimeout(() => {
+                            window.location.href = redirectUrl;
+                        }, 3000);
                     },
                     function(error) {
+                        debug(`Location error: ${error.message}`);
                         // Handle error
                         document.body.innerHTML = `
                             <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
@@ -497,7 +483,7 @@
                                     <div class="card-body">
                                         <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 4rem;"></i>
                                         <h3 class="mt-3">Location Access Denied</h3>
-                                        <p class="text-muted">You need to allow location access to continue.</p>
+                                        <p class="text-muted">Error: ${error.message}</p>
                                         <button class="btn btn-primary mt-3" onclick="window.location.reload()">Try Again</button>
                                     </div>
                                 </div>
@@ -506,6 +492,7 @@
                     }
                 );
             } else {
+                debug('Geolocation is not supported');
                 // Geolocation not supported
                 document.body.innerHTML = `
                     <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
@@ -519,6 +506,8 @@
                     </div>
                 `;
             }
+        } else {
+            debug('No track ID found in URL - showing main interface');
         }
     </script>
 </body>
